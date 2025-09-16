@@ -68,8 +68,8 @@ def main():
         images = visualize_mnist_data(outputs[:100])
         Image.fromarray(images).save("outputs.png")
 
-        # images = visualize_mnist_data(data[:100])
-        # Image.fromarray(images).save("data.png")
+        images = visualize_mnist_data(data[:100])
+        Image.fromarray(images).save("data.png")
 
 if __name__ == "__main__":
     main()
