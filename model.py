@@ -15,19 +15,37 @@ class Layer(nn.Module):
         return out
         
 class MLP(nn.Module):
-    def __init__(self, layer_sizes):
+    def __init__(self, encoder_layers, decoder_layers):
         super(MLP, self).__init__()
-        self.layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(layer_sizes[:-2], layer_sizes[1:-1])])
-        self.final_layer = nn.Linear(layer_sizes[-2], layer_sizes[-1])
+        self.encoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(encoder_layers[:-1], encoder_layers[1:])])
+        self.decoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(decoder_layers[:-2], decoder_layers[1:-1])])
+        self.final_layer = nn.Linear(decoder_layers[-2], decoder_layers[-1])
         self.sigmoid = nn.Sigmoid()
         
+        
     def forward(self, x):
-        for layer in self.layers:
+        for layer in self.encoder_layers:
+            x = layer(x)
+
+        emb = x.detach()
+        for layer in self.decoder_layers:
             x = layer(x)
         x = self.final_layer(x)
         x = self.sigmoid(x)
-        return x
+        return x, emb
+
+    def encode(self, x):
+        for layer in self.encoder_layers:
+            emb = layer(x)
+        return emb
+
+    def decode(self, emb):
+        for layer in self.decoder_layers:
+            emb = layer(emb)
+        emb = self.final_layer(emb)
+        emb = self.sigmoid(emb)
+        return emb
     
 if __name__ == "__main__":
-    model = MLP(layer_sizes=[10, 20, 30, 40])
+    model = MLP(encoder_layers=[784, 1000, 500, 250, 30], decoder_layers=[30, 250, 500, 1000, 784]).to(device)
     print(model)

@@ -37,8 +37,5 @@ def visualize_mnist_data(images):
     
     images = images * 255
     images = images.astype(np.uint8)
-
-    #plt.imshow(images, cmap="gray")
-    #plt.show()
     
     return images
