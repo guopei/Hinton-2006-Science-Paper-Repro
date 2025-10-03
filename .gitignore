@@ -9,7 +9,4 @@ wheels/
 # Virtual environments
 .venv
 
-*.pth
-*.png
-
 mnist_data/
