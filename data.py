@@ -21,7 +21,7 @@ def create_mnist_dataloaders(batch_size, image_size=28, num_workers=4):
     return DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
     ), DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
 
 

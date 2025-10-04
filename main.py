@@ -76,5 +76,29 @@ def main():
         images = visualize_mnist_data(data[:100])
         Image.fromarray(images).save("data.png")
 
+    with torch.no_grad():
+        for _, (data, _) in enumerate(test_loader):
+            data = data.view(data.size(0), -1).to(device)
+            images = visualize_mnist_data(data[:100])
+            Image.fromarray(images).save("data_first_batch.png")
+            for i in range(3):
+                outputs, _ = model(data)
+                images = visualize_mnist_data(outputs[:100])
+                Image.fromarray(images).save(f"outputs_first_batch_{i}.png")
+
+            break
+
+    with torch.no_grad():
+        for _, (data, _) in enumerate(test_loader):
+            num_samples = data.size(0)
+            mean = torch.randn(num_samples, 30).to(device)
+            std = torch.randn(num_samples, 30).to(device)
+            for i in range(3):
+                outputs = model.sample(mean, std)
+                images = visualize_mnist_data(outputs[:100])
+                Image.fromarray(images).save(f"sampled_first_batch_{i}.png")
+
+            break
+
 if __name__ == "__main__":
     main()
