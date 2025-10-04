@@ -19,22 +19,15 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.encoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(encoder_layers[:-1], encoder_layers[1:])])
         self.decoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(decoder_layers[:-2], decoder_layers[1:-1])])
-        self.mean_layer = Layer(encoder_layers[-1], decoder_layers[0])
-        self.std_var_layer = Layer(encoder_layers[-1], decoder_layers[0])
         self.final_layer = nn.Linear(decoder_layers[-2], decoder_layers[-1])
         self.sigmoid = nn.Sigmoid()
         
         
     def forward(self, x):
-        x = self.encode(x)
+        z = self.encode(x)
 
-        mean = self.mean_layer(x)
-        std = self.std_var_layer(x)
-
-        x = torch.randn_like(mean) * std + mean
-
-        x = self.decode(x)
-        return x, (mean, std)
+        x = self.decode(z)
+        return x, z
 
     def encode(self, x):
         for layer in self.encoder_layers:
@@ -48,13 +41,12 @@ class MLP(nn.Module):
         emb = self.sigmoid(emb)
         return emb
 
-    def sample(self, mean, std):
-        x = mean + torch.randn_like(mean) * std
+    def sample(self, x):
 
         x = self.decode(x)
         return x
 
 
 if __name__ == "__main__":
-    model = MLP(encoder_layers=[784, 1000, 500, 250, 30], decoder_layers=[30, 250, 500, 1000, 784]).to(device)
+    model = MLP(encoder_layers=[784, 1000, 500, 250, 30], decoder_layers=[30, 250, 500, 1000, 784])
     print(model)
