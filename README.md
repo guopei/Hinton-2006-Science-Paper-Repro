@@ -20,3 +20,7 @@ Almost 20 years have passed and it only takes me collectively an hour or so to i
 那么现在有一个小成就，就是训练的时候按照flow的方法，每一个epoch都训练所有step，然后生成的时候，按照step * 2去生成，step=3的时候，效果还不错
 
 see model_3.pth and outputs_3.png
+
+step=5的时候，按照step*3去生成，效果也还不错
+
+see model_5.pth and outputs_5.png

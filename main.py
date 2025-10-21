@@ -36,7 +36,7 @@ def main():
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 10))
 
     # load the model
-    steps = 3
+    steps = 5
     if os.path.exists(f"model_{steps}.pth"):
         model.load_state_dict(torch.load(f"model_{steps}.pth"))
     else:
