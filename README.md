@@ -16,3 +16,7 @@ By far, I've establishd a baseline on MNIST with 3.36 average square loss, compa
 ![](outputs.png)
 
 Almost 20 years have passed and it only takes me collectively an hour or so to implement this experiment. On a RTX 3060, the whole training takes only a little more than one minute. I can avoid worrying about the Boltzman Machine algorithm, and the training succeeds with the help of better initialization, better optimizer, batch norm, gradient clipping, and learning rate scheduler etc.
+
+那么现在有一个小成就，就是训练的时候按照flow的方法，每一个epoch都训练所有step，然后生成的时候，按照step * 2去生成，step=3的时候，效果还不错
+
+see model_3.pth and outputs_3.png
