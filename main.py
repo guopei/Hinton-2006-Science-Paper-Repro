@@ -44,8 +44,8 @@ def main():
             total_loss = 0
             for _, (data, _) in enumerate(train_loader):
                 optimizer.zero_grad()
-                outputs, latents = model(data.view(data.size(0), -1).to(device))
-                loss = criterion(outputs, data.view(data.size(0), -1).to(device)) + criterion(latents, torch.zeros_like(latents))
+                outputs, (mean, std) = model(data.view(data.size(0), -1).to(device))
+                loss = criterion(outputs, data.view(data.size(0), -1).to(device)) + (mean * mean + std * std - torch.log(std * std) - 1).mean() * 0.005
 
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -83,8 +83,6 @@ def main():
             Image.fromarray(images).save("data_first_batch.png")
             for i in range(3):
                 outputs, z = model(data)
-                print(z[0])
-                # input()
                 images = visualize_mnist_data(outputs[:100])
                 Image.fromarray(images).save(f"outputs_first_batch_{i}.png")
 
@@ -93,9 +91,8 @@ def main():
     with torch.no_grad():
         for _, (data, _) in enumerate(test_loader):
             num_samples = data.size(0)
-            x = torch.randn(num_samples, 30).to(device)
-            print(x[0])
             for i in range(3):
+                x = torch.randn(num_samples, 30).to(device)
                 outputs = model.sample(x)
                 images = visualize_mnist_data(outputs[:100])
                 Image.fromarray(images).save(f"sampled_first_batch_{i}.png")
