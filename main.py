@@ -1,5 +1,6 @@
 import os
 import time
+import math
 
 import torch
 import torch.nn as nn
@@ -36,7 +37,8 @@ def main():
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 10))
 
     # load the model
-    steps = 5
+    steps = 100
+    sigma = 0.95
     if os.path.exists(f"model_{steps}.pth"):
         model.load_state_dict(torch.load(f"model_{steps}.pth"))
     else:
@@ -48,15 +50,15 @@ def main():
             for _, (data, _) in enumerate(train_loader):
                 data = data.view(data.size(0), -1).to(device)
                 optimizer.zero_grad()
-                noise = torch.randn_like(data)
-                for step in range(steps):
-                    current_output = noise + step / steps * (data - noise)
-                    next_output = noise + (step+1) / steps * (data - noise)
+                random_steps = torch.randint(1, steps+1, (data.size(0), 1)).to(device)
 
-                    next_predicted, _ = model(current_output)
-                    loss = criterion(next_output, next_predicted)
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                noised_data = torch.sqrt(sigma**random_steps) * data + torch.randn_like(data) * torch.sqrt(1 - sigma**random_steps)
+                denoised_data = torch.sqrt(sigma**(random_steps-1)) * data + torch.randn_like(data) * torch.sqrt(1 - sigma**(random_steps-1))
+                    
+                predicted = model(noised_data)
+                loss = criterion(predicted, denoised_data)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
 
                 total_loss += loss.item()
@@ -69,13 +71,17 @@ def main():
 
     model.eval()
 
+    torch.manual_seed(0)
+    torch.cuda.manual_seed(0)
+    np.random.seed(0)
+
     with torch.no_grad():
         for _, (data, _) in enumerate(test_loader):
             data = data.view(data.size(0), -1).to(device)
             noise = torch.randn_like(data)
             current_output = noise
-            for step in range(steps*3):
-                current_output, _ = model(current_output)
+            for _ in range(steps):
+                current_output = model(current_output)
 
             images = visualize_mnist_data(current_output[:100])
             Image.fromarray(images).save(f"outputs_{steps}.png")

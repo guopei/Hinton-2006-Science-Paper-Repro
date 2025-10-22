@@ -34,6 +34,10 @@ def visualize_mnist_data(images):
     images = images.permute(0, 2, 1, 3)
     images = images.reshape(n*28, n*28)
     images = images.detach().cpu().numpy()
+
+    images = images - images.min()
+    images = images / (images.max() - images.min())
+    # images = images.clip(0, 1)
     
     images = images * 255
     images = images.astype(np.uint8)

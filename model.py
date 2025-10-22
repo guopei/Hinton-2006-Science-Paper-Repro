@@ -22,7 +22,6 @@ class MLP(nn.Module):
         self.final_layer = nn.Linear(decoder_layers[-2], decoder_layers[-1])
         self.sigmoid = nn.Sigmoid()
         
-        
     def forward(self, x):
         for layer in self.encoder_layers:
             x = layer(x)
