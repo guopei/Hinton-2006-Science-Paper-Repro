@@ -20,25 +20,23 @@ def linear_warmup(step, warmup_steps):
         return step / warmup_steps
     return 1.0
 
-
 def main():
     print("Hello from autoencoder!")
     device="cuda"
 
-    train_epochs = 50
-    model = MLP(encoder_layers=[784, 1000, 500, 250, 30], decoder_layers=[30, 250, 500, 1000, 784])
+    train_epochs = 500
+    model = MLP(layers=[784, 1000, 500, 250, 30, 250, 500, 1000, 784])
     model.to(device)
 
     train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
     criterion = nn.MSELoss()
 
-    scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 10))
+    scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 5))
 
     # load the model
-    steps = 10
-    if os.path.exists(f"model_{steps}.pth"):
-        model.load_state_dict(torch.load(f"model_{steps}.pth"))
+    if os.path.exists(f"model.pth"):
+        model.load_state_dict(torch.load(f"model.pth"))
     else:
         print("No model found, training from scratch")
         model.train()
@@ -49,38 +47,35 @@ def main():
                 data = data.view(data.size(0), -1).to(device)
                 optimizer.zero_grad()
                 noise = torch.randn_like(data)
-                for step in range(steps):
-                    current_output = noise + step / steps * (data - noise)
-                    next_output = noise + (step+1) / steps * (data - noise)
+                
+                t = torch.rand(len(data), 1).to(device)
 
-                    next_predicted, _ = model(current_output)
-                    loss = criterion(next_output, next_predicted)
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                x_t = (1 - t) * noise + t * data
+                dx_t = data - noise
+
+                predicted = model(x_t, t)
+                loss = criterion(predicted, dx_t)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
 
                 total_loss += loss.item()
             scheduler.step()
 
             print(f"Epoch {epoch+1}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
-        torch.save(model.state_dict(), f"model_{steps}.pth")
+        # torch.save(model.state_dict(), f"model.pth")
         time_end = time.time()
         print(f"Training time: {time_end - time_start} seconds")
 
     model.eval()
-
+    n_steps = 100
     with torch.no_grad():
-        for _, (data, _) in enumerate(test_loader):
-            data = data.view(data.size(0), -1).to(device)
-            noise = torch.randn_like(data)
-            current_output = noise
-            for step in range(steps*8):
-                current_output, _ = model(current_output)
-
-            images = visualize_mnist_data(current_output[:100])
-            Image.fromarray(images).save(f"outputs_{steps}.png")
-            break
-
+        time_steps = torch.linspace(0, 1.0, n_steps + 1).to(device)
+        x = torch.randn(100, 784).to(device)
+        for i in range(n_steps):
+            x = model.step(x, time_steps[i], time_steps[i + 1])
+        images = visualize_mnist_data(x[:100])
+        Image.fromarray(images).save(f"outputs_{n_steps}.png")
 
 if __name__ == "__main__":
     main()

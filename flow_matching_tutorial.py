@@ -26,15 +26,22 @@ flow = Flow()
 optimizer = torch.optim.Adam(flow.parameters(), 1e-2)
 loss_fn = nn.MSELoss()
 
-for _ in tqdm(range(10000)):
+total_loss = 0
+for i in tqdm(range(10000)):
     x_1 = Tensor(make_moons(256, noise=0.05)[0])
     x_0 = torch.randn_like(x_1)
     t = torch.rand(len(x_1), 1)
     x_t = (1- t) * x_0 + t * x_1
     dx_t = x_1 - x_0
     optimizer.zero_grad()
-    loss_fn(flow(x_t, t), dx_t).backward()
+    loss = loss_fn(flow(x_t, t), dx_t)
+    loss.backward()
     optimizer.step()
+
+    total_loss += loss.item()
+
+    if i > 0 and i % 100 == 0:
+        print(f"Loss: {loss.item()}, Average Loss: {total_loss/i}")
 
 # sampling
 x = torch.randn(300, 2)
