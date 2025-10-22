@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 def create_mnist_dataloaders(batch_size, image_size=28, num_workers=4):
 
     preprocess = transforms.Compose(
-        [transforms.Resize(image_size), transforms.ToTensor()]
+        [transforms.Resize(image_size), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
     )
 
     train_dataset = MNIST(
@@ -35,6 +35,9 @@ def visualize_mnist_data(images):
     images = images.reshape(n*28, n*28)
     images = images.detach().cpu().numpy()
     
+    # Denormalize from [-1, 1] to [0, 1] then to [0, 255]
+    images = (images + 1) / 2  # Convert from [-1, 1] to [0, 1]
+    images = np.clip(images, 0, 1)  # Ensure values are in [0, 1]
     images = images * 255
     images = images.astype(np.uint8)
     

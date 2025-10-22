@@ -24,12 +24,12 @@ def main():
     print("Hello from autoencoder!")
     device="cuda"
 
-    train_epochs = 500
+    train_epochs = 50
     model = MLP(layers=[784, 1000, 500, 250, 30, 250, 500, 1000, 784])
     model.to(device)
 
     train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)  # Reduced learning rate
     criterion = nn.MSELoss()
 
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 5))
@@ -50,8 +50,9 @@ def main():
                 
                 t = torch.rand(len(data), 1).to(device)
 
-                x_t = (1 - t) * noise + t * data
-                dx_t = data - noise
+                # Correct flow matching formulation: interpolate from data to noise
+                x_t = (1 - t) * data + t * noise
+                dx_t = noise - data  # Velocity field points from data to noise
 
                 predicted = model(x_t, t)
                 loss = criterion(predicted, dx_t)
@@ -71,9 +72,13 @@ def main():
     n_steps = 100
     with torch.no_grad():
         time_steps = torch.linspace(0, 1.0, n_steps + 1).to(device)
+        # Start from noise (t=1) and go to data (t=0)
         x = torch.randn(100, 784).to(device)
         for i in range(n_steps):
-            x = model.step(x, time_steps[i], time_steps[i + 1])
+            # Go backwards in time: from t=1 to t=0
+            t_start = time_steps[n_steps - i]
+            t_end = time_steps[n_steps - i - 1]
+            x = model.step(x, t_start, t_end)
         images = visualize_mnist_data(x[:100])
         Image.fromarray(images).save(f"outputs_{n_steps}.png")
 

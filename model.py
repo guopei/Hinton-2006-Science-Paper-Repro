@@ -6,12 +6,12 @@ class Layer(nn.Module):
         super(Layer, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=True)
         self.elu = nn.ELU()
-        self.batch_norm = nn.BatchNorm1d(output_size)
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self, x):
         out = self.linear(x)
         out = self.elu(out)
-        out = self.batch_norm(out)
+        out = self.dropout(out)
         return out
         
 class MLP(nn.Module):
@@ -30,5 +30,5 @@ class MLP(nn.Module):
 
     def step(self, x, t_start, t_end):
         t_start = t_start.view(1, 1).expand(x.shape[0], 1)
-        # return x + (t_end - t_start) * self.forward(x, t_start)
-        return x + (t_end - t_start) * self(x + self(x, t_start) * (t_end - t_start) / 2, t_start + (t_end - t_start) / 2)
+        # Use simple Euler method for stability
+        return x + (t_end - t_start) * self(x, t_start)
