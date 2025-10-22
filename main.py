@@ -52,7 +52,7 @@ def main():
 
                 # Correct flow matching formulation: interpolate from data to noise
                 x_t = (1 - t) * data + t * noise
-                dx_t = noise - data  # Velocity field points from data to noise
+                dx_t = data - noise  # Velocity field points from data to noise
 
                 predicted = model(x_t, t)
                 loss = criterion(predicted, dx_t)
@@ -72,13 +72,9 @@ def main():
     n_steps = 100
     with torch.no_grad():
         time_steps = torch.linspace(0, 1.0, n_steps + 1).to(device)
-        # Start from noise (t=1) and go to data (t=0)
         x = torch.randn(100, 784).to(device)
         for i in range(n_steps):
-            # Go backwards in time: from t=1 to t=0
-            t_start = time_steps[n_steps - i]
-            t_end = time_steps[n_steps - i - 1]
-            x = model.step(x, t_start, t_end)
+            x = model.step(x, time_steps[i], time_steps[i + 1])
         images = visualize_mnist_data(x[:100])
         Image.fromarray(images).save(f"outputs_{n_steps}.png")
 
