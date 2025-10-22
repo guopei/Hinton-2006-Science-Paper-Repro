@@ -6,12 +6,10 @@ class Layer(nn.Module):
         super(Layer, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=True)
         self.elu = nn.ELU()
-        self.dropout = nn.Dropout(0.1)
 
     def forward(self, x):
         out = self.linear(x)
         out = self.elu(out)
-        out = self.dropout(out)
         return out
         
 class MLP(nn.Module):
@@ -19,7 +17,6 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         layers[0] += 1
         self.layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(layers[:-1], layers[1:])])
-        self.elu = nn.ELU()
         
         
     def forward(self, x, t):
