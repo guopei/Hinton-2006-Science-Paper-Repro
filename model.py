@@ -27,25 +27,8 @@ class MLP(nn.Module):
         for layer in self.encoder_layers:
             x = layer(x)
 
-        emb = x.detach()
         for layer in self.decoder_layers:
             x = layer(x)
         x = self.final_layer(x)
         x = self.sigmoid(x)
-        return x, emb
-
-    def encode(self, x):
-        for layer in self.encoder_layers:
-            emb = layer(x)
-        return emb
-
-    def decode(self, emb):
-        for layer in self.decoder_layers:
-            emb = layer(emb)
-        emb = self.final_layer(emb)
-        emb = self.sigmoid(emb)
-        return emb
-    
-if __name__ == "__main__":
-    model = MLP(encoder_layers=[784, 1000, 500, 250, 30], decoder_layers=[30, 250, 500, 1000, 784]).to(device)
-    print(model)
+        return x
