@@ -24,3 +24,5 @@ see model_3.pth and outputs_3.png
 step=5的时候，按照step*3去生成，效果也还不错
 
 see model_5.pth and outputs_5.png
+
+增加了一个flow_matching_tutorial.py的官方代码，并带动其中step函数从midpoint法到forward euler法，即一步算出来，不要算中点走半步再走半步，发现一些小的差异，不是本质区别。

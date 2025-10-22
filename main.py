@@ -36,7 +36,7 @@ def main():
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 10))
 
     # load the model
-    steps = 5
+    steps = 10
     if os.path.exists(f"model_{steps}.pth"):
         model.load_state_dict(torch.load(f"model_{steps}.pth"))
     else:
@@ -74,7 +74,7 @@ def main():
             data = data.view(data.size(0), -1).to(device)
             noise = torch.randn_like(data)
             current_output = noise
-            for step in range(steps*3):
+            for step in range(steps*8):
                 current_output, _ = model(current_output)
 
             images = visualize_mnist_data(current_output[:100])
