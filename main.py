@@ -25,8 +25,9 @@ def main():
     device="cuda"
 
     train_epochs = 50
-    model = MLP(layers=[784, 1000, 1000, 1000, 1000, 1000, 784])
+    model = MLP(layers=[784, 4000, 4000, 4000, 4000, 4000, 784])
     model.to(device)
+    print(model)
 
     train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)  # Reduced learning rate
@@ -35,8 +36,8 @@ def main():
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 5))
 
     # load the model
-    if os.path.exists(f"model.pth"):
-        model.load_state_dict(torch.load(f"model.pth"))
+    if os.path.exists(f"model_{train_epochs}.pth"):
+        model.load_state_dict(torch.load(f"model_{train_epochs}.pth"))
     else:
         print("No model found, training from scratch")
         model.train()
@@ -51,7 +52,7 @@ def main():
                 t = torch.rand(len(data), 1).to(device)
 
                 x_t = (1 - t) * noise + t * data
-                dx_t = data - noise  
+                dx_t = data - noise
 
                 predicted = model(x_t, t)
                 loss = criterion(predicted, dx_t)
@@ -63,7 +64,7 @@ def main():
             scheduler.step()
 
             print(f"Epoch {epoch}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
-        # torch.save(model.state_dict(), f"model.pth")
+        # torch.save(model.state_dict(), f"model_{train_epochs}.pth")
         time_end = time.time()
         print(f"Training time: {time_end - time_start} seconds")
 
@@ -74,6 +75,8 @@ def main():
         x = torch.randn(100, 784).to(device)
         for i in range(n_steps):
             x = model.step(x, time_steps[i], time_steps[i + 1])
+
+        print(x.max(), x.min())
         images = visualize_mnist_data(x[:100])
         Image.fromarray(images).save(f"outputs_{n_steps}.png")
 
