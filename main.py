@@ -71,10 +71,6 @@ def main():
 
     model.eval()
 
-    torch.manual_seed(0)
-    torch.cuda.manual_seed(0)
-    np.random.seed(0)
-
     with torch.no_grad():
         for _, (data, _) in enumerate(test_loader):
             data = data.view(data.size(0), -1).to(device)
@@ -82,6 +78,7 @@ def main():
             current_output = noise
             for _ in range(steps):
                 current_output = model(current_output)
+                current_output += noise * sigma**(_+1)
 
             images = visualize_mnist_data(current_output[:100])
             Image.fromarray(images).save(f"outputs_{steps}.png")
