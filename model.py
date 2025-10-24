@@ -18,13 +18,17 @@ class MLP(nn.Module):
     def __init__(self, layers):
         super(MLP, self).__init__()
         layers[0] += 1
-        self.layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(layers[:-1], layers[1:])])
+        self.first_layer = Layer(layers[0], layers[1])
+        self.middle_layers = nn.ModuleList([Layer(layers[i], layers[i+1]) for i in range(1, len(layers) - 2)])
+        self.last_layer = Layer(layers[-2], layers[-1])
 
     def forward(self, x, t):
         x = torch.cat((x, t), -1)
-        for layer in self.layers:
-            x = layer(x)
-
+        x = self.first_layer(x)
+        for layer in self.middle_layers:
+            residual = layer(x)
+            x = x + residual
+        x = self.last_layer(x)
         return x
 
     def step(self, x, t_start, t_end):
