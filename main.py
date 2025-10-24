@@ -24,8 +24,8 @@ def main():
     print("Hello from autoencoder!")
     device="cuda"
 
-    train_epochs = 50
-    model = MLP(layers=[784, 4000, 4000, 4000, 4000, 4000, 784])
+    train_epochs = 500
+    model = MLP(layers=[784, 6000, 6000, 6000, 6000, 6000, 6000, 784])
     model.to(device)
     print(model)
 
