@@ -7,7 +7,7 @@ import numpy as np
 from torchvision.transforms.functional import PILImage
 from PIL import Image 
 
-from model import MLP
+from model import UNet
 from data import create_mnist_dataloaders, visualize_mnist_data
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -15,17 +15,12 @@ torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 np.random.seed(42)
 
-def linear_warmup(step, warmup_steps):
-    if step < warmup_steps:
-        return step / warmup_steps
-    return 1.0
-
 def main():
     print("Hello from autoencoder!")
     device="cuda"
 
-    train_epochs = 500
-    model = MLP(layers=[784, 6000, 6000, 6000, 6000, 6000, 6000, 784])
+    train_epochs = 50
+    model = UNet(input_dim=784, hidden_dim=256, time_emb_dim=128)
     model.to(device)
     print(model)
 
@@ -33,7 +28,8 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)  # Reduced learning rate
     criterion = nn.MSELoss()
 
-    scheduler = LambdaLR(optimizer, lr_lambda=lambda step: linear_warmup(step, train_epochs // 5))
+    # use cosine annealing scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs, eta_min=0)
 
     # load the model
     if os.path.exists(f"model_{train_epochs}.pth"):
@@ -63,7 +59,7 @@ def main():
                 total_loss += loss.item()
             scheduler.step()
 
-            print(f"Epoch {epoch}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
+            print(f"Epoch {epoch}/{train_epochs}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
         # torch.save(model.state_dict(), f"model_{train_epochs}.pth")
         time_end = time.time()
         print(f"Training time: {time_end - time_start} seconds")
