@@ -20,9 +20,12 @@ def main():
     device="cuda"
 
     train_epochs = 50
-    model = UNet(input_dim=784, hidden_dim=256, time_emb_dim=128)
+    model = UNet()
     model.to(device)
     print(model)
+
+    total_params = sum(param.numel() for param in model.parameters())
+    print(f"Total parameters: {total_params}")
 
     train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)  # Reduced learning rate
@@ -41,13 +44,13 @@ def main():
         for epoch in range(train_epochs):
             total_loss = 0
             for _, (data, _) in enumerate(train_loader):
-                data = data.view(data.size(0), -1).to(device)
+                data = data.to(device)
                 optimizer.zero_grad()
                 noise = torch.randn_like(data)
                 
                 t = torch.rand(len(data), 1).to(device)
 
-                x_t = (1 - t) * noise + t * data
+                x_t = (1 - t[..., None, None]) * noise + t[..., None, None] * data
                 dx_t = data - noise
 
                 predicted = model(x_t, t)
@@ -68,7 +71,7 @@ def main():
     n_steps = 100
     with torch.no_grad():
         time_steps = torch.linspace(0, 1.0, n_steps + 1).to(device)
-        x = torch.randn(100, 784).to(device)
+        x = torch.randn(100, 1, 28, 28).to(device)
         for i in range(n_steps):
             x = model.step(x, time_steps[i], time_steps[i + 1])
 
