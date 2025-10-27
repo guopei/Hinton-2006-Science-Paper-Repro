@@ -11,7 +11,7 @@ class ResidualBlock(nn.Module):
         super().__init__()
         self.time_embedding = nn.Linear(1, out_channels)
         self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
-        self.norm = nn.BatchNorm2d(out_channels)
+        self.norm = nn.GroupNorm(8, out_channels)
         self.activation = nn.SiLU()
 
         if in_channels != out_channels:
@@ -38,7 +38,7 @@ class ResidualBlock(nn.Module):
 
 class UNet(nn.Module):
     """Simplified U-Net for MNIST autoencoder"""
-    def __init__(self, hidden_dim=256):
+    def __init__(self):
         super().__init__()
         
         # Encoder
@@ -58,7 +58,7 @@ class UNet(nn.Module):
         self.output_proj = nn.Conv2d(64, 1, 1)
         
         # Downsampling and upsampling
-        self.downsample = nn.MaxPool2d(2)
+        self.downsample = nn.AvgPool2d(2)
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
 
     def forward(self, x, t):
