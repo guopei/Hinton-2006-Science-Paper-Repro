@@ -4,30 +4,28 @@ import torch.nn as nn
 class Layer(nn.Module):
     def __init__(self, input_size, output_size):
         super(Layer, self).__init__()
+        self.input_size = input_size
+        self.output_size = output_size
         self.linear = nn.Linear(input_size, output_size, bias=False)
-        self.sigmoid = nn.Sigmoid()
+        self.silu = nn.SiLU()
         self.batch_norm = nn.BatchNorm1d(output_size)
 
     def forward(self, x):
         out = self.linear(x)
-        out = self.sigmoid(out)
+        out = self.silu(out)
         out = self.batch_norm(out)
+        if self.output_size == self.input_size:
+            out += x
         return out
         
 class MLP(nn.Module):
-    def __init__(self, encoder_layers, decoder_layers):
+    def __init__(self, layers):
         super(MLP, self).__init__()
-        self.encoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(encoder_layers[:-1], encoder_layers[1:])])
-        self.decoder_layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(decoder_layers[:-2], decoder_layers[1:-1])])
-        self.final_layer = nn.Linear(decoder_layers[-2], decoder_layers[-1])
-        self.sigmoid = nn.Sigmoid()
+        layers[0] += 1
+        self.layers = nn.ModuleList([Layer(input_size, output_size) for input_size, output_size in zip(layers[:-1], layers[1:])])
         
-    def forward(self, x):
-        for layer in self.encoder_layers:
+    def forward(self, x, t):
+        x = torch.cat([x, t], dim=1)
+        for layer in self.layers:
             x = layer(x)
-
-        for layer in self.decoder_layers:
-            x = layer(x)
-        x = self.final_layer(x)
-        x = self.sigmoid(x)
         return x
