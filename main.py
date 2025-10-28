@@ -10,12 +10,10 @@ from PIL import Image
 
 from model import MLP
 from data import create_mnist_dataloaders, visualize_mnist_data
-from torch.optim.lr_scheduler import LambdaLR
 
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 np.random.seed(42)
-
 
 def main():
     print("Hello from autoencoder!")
@@ -27,23 +25,22 @@ def main():
     print(model)
 
     train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs, eta_min=0.0001)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs)
 
     # load the model
     steps = 100
     betas = torch.linspace(0.0001, 0.02, steps, device=device)
     alphas = 1.0 - betas
     alphas_cumprod = torch.cumprod(alphas, dim=0)
-    sqrt_recip_alphas = 1.0 / (torch.sqrt(alphas) + 1e-8)
+    sqrt_recip_alphas = 1.0 / torch.sqrt(alphas)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
     
     # Posterior variance for reverse process
     posterior_variance = betas * (1.0 - torch.cat([torch.tensor([1.0], device=device), alphas_cumprod[:-1]])) / (1.0 - alphas_cumprod)
-    posterior_variance = torch.clamp(posterior_variance, min=1e-20)
 
     if os.path.exists(f"model_{steps}.pth"):
         model.load_state_dict(torch.load(f"model_{steps}.pth"))
@@ -74,7 +71,7 @@ def main():
             scheduler.step()
 
             print(f"Epoch {epoch+1}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
-        torch.save(model.state_dict(), f"model_{steps}.pth")
+        # torch.save(model.state_dict(), f"model_{steps}.pth")
         time_end = time.time()
         print(f"Training time: {time_end - time_start} seconds")
 
@@ -93,8 +90,8 @@ def main():
                 
                 # Compute the mean of the reverse diffusion process
                 # mean = 1/sqrt(alpha_t) * (x_t - beta_t/sqrt(1-alpha_bar_t) * noise_pred)
-                mean = sqrt_recip_alphas[step] * (x_t - betas[step] / (sqrt_one_minus_alphas_cumprod[step] + 1e-8) * noise_pred)
-                
+                mean = sqrt_recip_alphas[step] * (x_t - betas[step] / sqrt_one_minus_alphas_cumprod[step] * noise_pred)
+
                 if step > 0:
                     # Add noise during sampling (except for the last step)
                     noise = torch.randn_like(x_t)

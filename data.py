@@ -39,7 +39,7 @@ def visualize_mnist_data(images):
     images = (images + 1) / 2  # Convert from [-1, 1] to [0, 1]
     
     # Handle NaN and inf values before conversion
-    images = np.nan_to_num(images, nan=0.5, posinf=1.0, neginf=0.0)
+    # images = np.nan_to_num(images, nan=0.5, posinf=1.0, neginf=0.0)
     images = np.clip(images, 0, 1)  # Ensure values are in [0, 1]
     
     images = images * 255
