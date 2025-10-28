@@ -5,11 +5,29 @@ import math
 
 from torch.nn.modules.module import T
 
+
+class TimeEmbedding(nn.Module):
+    """Sinusoidal time embedding for diffusion models"""
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+
+    def forward(self, time):
+        device = time.device
+        half_dim = self.dim // 2
+        embeddings = math.log(10000) / (half_dim - 1)
+        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = time[:, None] * embeddings[None, :]
+        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
+        embeddings = embeddings.squeeze()
+        return embeddings
+
 class ResidualBlock(nn.Module):
     """Residual block with time embedding"""
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, time_emb_dim):
         super().__init__()
-        self.time_embedding = nn.Linear(1, out_channels)
+        self.time_proj = nn.Linear(time_emb_dim, out_channels)
         self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)
         self.norm = nn.GroupNorm(8, out_channels)
         self.activation = nn.SiLU()
@@ -22,11 +40,11 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x, t):
 
-        time_emb = self.time_embedding(t)
+        time_proj = self.time_proj(t)
         
         h = self.conv(x)
 
-        h = h + time_emb[:, :, None, None]
+        h = h + time_proj[:, :, None, None]
         h = self.norm(h)
         h = self.activation(h)
 
@@ -38,21 +56,23 @@ class ResidualBlock(nn.Module):
 
 class UNet(nn.Module):
     """Simplified U-Net for MNIST autoencoder"""
-    def __init__(self):
+    def __init__(self, time_emb_dim=128):
         super().__init__()
+
+        self.time_embedding = TimeEmbedding(dim=128)
         
         # Encoder
-        self.enc1 = ResidualBlock(1, 64)
-        self.enc2 = ResidualBlock(64, 128)
-        self.enc3 = ResidualBlock(128, 256)
+        self.enc1 = ResidualBlock(1, 64, time_emb_dim)
+        self.enc2 = ResidualBlock(64, 128, time_emb_dim)
+        self.enc3 = ResidualBlock(128, 256, time_emb_dim)
         
         # Bottleneck
-        self.bottleneck = ResidualBlock(256, 512)
+        self.bottleneck = ResidualBlock(256, 512, time_emb_dim)
         
         # Decoder
-        self.dec3 = ResidualBlock(512 + 256, 256)
-        self.dec2 = ResidualBlock(256 + 128, 128)
-        self.dec1 = ResidualBlock(128 + 64, 64)
+        self.dec3 = ResidualBlock(512 + 256, 256, time_emb_dim)
+        self.dec2 = ResidualBlock(256 + 128, 128, time_emb_dim)
+        self.dec1 = ResidualBlock(128 + 64, 64, time_emb_dim)
         
         # Output projection
         self.output_proj = nn.Conv2d(64, 1, 1)
@@ -65,17 +85,17 @@ class UNet(nn.Module):
         batch_size = x.shape[0]
         
         # Encoder
-        e1 = self.enc1(x, t)
-        e2 = self.enc2(self.downsample(e1), t)
-        e3 = self.enc3(self.downsample(e2), t)
+        e1 = self.enc1(x, self.time_embedding(t))
+        e2 = self.enc2(self.downsample(e1), self.time_embedding(t))
+        e3 = self.enc3(self.downsample(e2), self.time_embedding(t))
         
         # Bottleneck
-        b = self.bottleneck(e3, t)
+        b = self.bottleneck(e3, self.time_embedding(t))
         
         # Decoder with skip connections
-        d3 = self.dec3(torch.cat([b, e3], dim=1), t)
-        d2 = self.dec2(torch.cat([self.upsample(d3), e2], dim=1), t)
-        d1 = self.dec1(torch.cat([self.upsample(d2), e1], dim=1), t)
+        d3 = self.dec3(torch.cat([b, e3], dim=1), self.time_embedding(t))
+        d2 = self.dec2(torch.cat([self.upsample(d3), e2], dim=1), self.time_embedding(t))
+        d1 = self.dec1(torch.cat([self.upsample(d2), e1], dim=1), self.time_embedding(t))
         
         # Output
         out = self.output_proj(d1)
