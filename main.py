@@ -7,6 +7,7 @@ import torch.nn as nn
 import numpy as np
 from torchvision.transforms.functional import PILImage
 from PIL import Image 
+import torch.nn.functional as F
 
 from model import MLP
 from data import create_mnist_dataloaders, visualize_mnist_data
@@ -20,7 +21,7 @@ def main():
     device="cuda"
 
     train_epochs = 50
-    model = MLP(layers=[784, 1000, 1000, 1000, 1000, 784])
+    model = MLP(layers=[784, 2000, 2000, 2000, 2000, 784])
     model.to(device)
     print(model)
 
@@ -31,16 +32,20 @@ def main():
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs)
 
     # load the model
-    steps = 100
-    betas = torch.linspace(0.0001, 0.02, steps, device=device)
+    steps = 1000
+    beta_start = 1e-4
+    beta_end = 0.02
+    betas = torch.linspace(beta_start, beta_end, steps).to(device)
     alphas = 1.0 - betas
     alphas_cumprod = torch.cumprod(alphas, dim=0)
+    alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
+
     sqrt_recip_alphas = 1.0 / torch.sqrt(alphas)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
     
     # Posterior variance for reverse process
-    posterior_variance = betas * (1.0 - torch.cat([torch.tensor([1.0], device=device), alphas_cumprod[:-1]])) / (1.0 - alphas_cumprod)
+    posterior_variance = betas * (1 - alphas_cumprod_prev) / (1 - alphas_cumprod)
 
     if os.path.exists(f"model_{steps}.pth"):
         model.load_state_dict(torch.load(f"model_{steps}.pth"))

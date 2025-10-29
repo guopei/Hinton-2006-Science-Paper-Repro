@@ -14,6 +14,7 @@ class Layer(nn.Module):
         out = self.linear(x)
         out = self.silu(out)
         out = self.batch_norm(out)
+
         if self.output_size == self.input_size:
             out += x
         return out
