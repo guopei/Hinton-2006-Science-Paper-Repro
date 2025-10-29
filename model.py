@@ -17,6 +17,7 @@ class Layer(nn.Module):
 
         if self.output_size == self.input_size:
             out += x
+
         return out
         
 class MLP(nn.Module):
@@ -29,4 +30,5 @@ class MLP(nn.Module):
         x = torch.cat([x, t], dim=1)
         for layer in self.layers:
             x = layer(x)
+
         return x

@@ -21,7 +21,7 @@ def main():
     device="cuda"
 
     train_epochs = 50
-    model = MLP(layers=[784, 2000, 2000, 2000, 2000, 784])
+    model = MLP(layers=[784, 4000, 4000, 4000, 4000, 784])
     model.to(device)
     print(model)
 
@@ -67,6 +67,7 @@ def main():
                 x_t = sqrt_alpha_cumprod * x_0 + sqrt_one_minus_alpha_cumprod * noise
                     
                 predicted = model(x_t, t)
+                # print(predicted.max(), predicted.min())
                 loss = criterion(predicted, noise)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -87,25 +88,28 @@ def main():
             # Start with pure noise
             x_t = torch.randn_like(data.view(data.size(0), -1).to(device))
             
-            for step in range(steps-1, -1, -1):
-                t = torch.full((x_t.size(0), 1), step, device=device, dtype=torch.long)
+            for i in range(steps-1, -1, -1):
+                # print(i)
+                t = torch.full((data.size(0),), i, device=device, dtype=torch.long)
+                betas_t = betas[t][:, None]
+                sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[t][:, None]
+                sqrt_recip_alphas_t = torch.sqrt(1.0 / alphas[t])[:, None]
                 
-                # Predict noise at time step t
-                noise_pred = model(x_t, t)
-                
-                # Compute the mean of the reverse diffusion process
-                # mean = 1/sqrt(alpha_t) * (x_t - beta_t/sqrt(1-alpha_bar_t) * noise_pred)
-                mean = sqrt_recip_alphas[step] * (x_t - betas[step] / sqrt_one_minus_alphas_cumprod[step] * noise_pred)
+                # 预测噪声
+                predicted_noise = model(x_t, t[:, None])
 
-                if step > 0:
-                    # Add noise during sampling (except for the last step)
-                    noise = torch.randn_like(x_t)
-                    # Use the proper posterior variance
-                    variance = posterior_variance[step]
-                    x_t = mean + torch.sqrt(variance) * noise
+                # print(predicted_noise.max(), predicted_noise.min())
+                # 计算均值
+                model_mean = sqrt_recip_alphas_t * (
+                    x_t - betas_t * predicted_noise / sqrt_one_minus_alphas_cumprod_t
+                )
+
+                if i == 0:
+                    x_t = model_mean
                 else:
-                    # Last step: deterministic (no noise)
-                    x_t = mean
+                    posterior_variance_t = posterior_variance[t][:, None]
+                    noise = torch.randn_like(x_t)
+                    x_t = model_mean + torch.sqrt(posterior_variance_t) * noise
 
             images = visualize_mnist_data(x_t[:100])
             Image.fromarray(images).save(f"outputs_{steps}.png")
