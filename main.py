@@ -9,7 +9,7 @@ from torchvision.transforms.functional import PILImage
 from PIL import Image 
 import torch.nn.functional as F
 
-from model import MLP
+from model import UNet
 from data import create_mnist_dataloaders, visualize_mnist_data
 
 torch.manual_seed(42)
@@ -21,16 +21,6 @@ def main():
     device="cuda"
 
     train_epochs = 50
-    model = MLP(layers=[784, 4000, 4000, 4000, 4000, 784])
-    model.to(device)
-    print(model)
-
-    train_loader, test_loader = create_mnist_dataloaders(batch_size=512, num_workers=4)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
-    criterion = nn.MSELoss()
-
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs)
-
     # load the model
     steps = 1000
     beta_start = 1e-4
@@ -43,6 +33,15 @@ def main():
     sqrt_recip_alphas = 1.0 / torch.sqrt(alphas)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
+
+    model = UNet().to(device)
+    print(model)
+
+    train_loader, test_loader = create_mnist_dataloaders(batch_size=128, num_workers=4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+    criterion = nn.MSELoss()
+
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_epochs)
     
     # Posterior variance for reverse process
     posterior_variance = betas * (1 - alphas_cumprod_prev) / (1 - alphas_cumprod)
@@ -56,12 +55,12 @@ def main():
         for epoch in range(train_epochs):
             total_loss = 0
             for _, (data, _) in enumerate(train_loader):
-                x_0 = data.view(data.size(0), -1).to(device)
+                x_0 = data.to(device)
                 optimizer.zero_grad()
-                t = torch.randint(0, steps, (data.size(0), 1)).to(device)
+                t = torch.randint(0, steps, (data.size(0), )).to(device)
 
-                sqrt_alpha_cumprod = sqrt_alphas_cumprod[t]
-                sqrt_one_minus_alpha_cumprod = sqrt_one_minus_alphas_cumprod[t]
+                sqrt_alpha_cumprod = sqrt_alphas_cumprod[t][:, None, None, None]
+                sqrt_one_minus_alpha_cumprod = sqrt_one_minus_alphas_cumprod[t][:, None, None, None]
 
                 noise = torch.randn_like(x_0)
                 x_t = sqrt_alpha_cumprod * x_0 + sqrt_one_minus_alpha_cumprod * noise
@@ -86,17 +85,17 @@ def main():
     with torch.no_grad():
         for _, (data, _) in enumerate(test_loader):
             # Start with pure noise
-            x_t = torch.randn_like(data.view(data.size(0), -1).to(device))
+            x_t = torch.randn_like(data).to(device)
             
             for i in range(steps-1, -1, -1):
                 # print(i)
                 t = torch.full((data.size(0),), i, device=device, dtype=torch.long)
-                betas_t = betas[t][:, None]
-                sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[t][:, None]
-                sqrt_recip_alphas_t = torch.sqrt(1.0 / alphas[t])[:, None]
+                betas_t = betas[t][:, None, None, None]
+                sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[t][:, None, None, None]
+                sqrt_recip_alphas_t = torch.sqrt(1.0 / alphas[t])[:, None, None, None]
                 
                 # 预测噪声
-                predicted_noise = model(x_t, t[:, None])
+                predicted_noise = model(x_t, t)
 
                 # print(predicted_noise.max(), predicted_noise.min())
                 # 计算均值
@@ -107,12 +106,13 @@ def main():
                 if i == 0:
                     x_t = model_mean
                 else:
-                    posterior_variance_t = posterior_variance[t][:, None]
+                    posterior_variance_t = posterior_variance[t][:, None, None, None]
                     noise = torch.randn_like(x_t)
                     x_t = model_mean + torch.sqrt(posterior_variance_t) * noise
 
-            images = visualize_mnist_data(x_t[:100])
-            Image.fromarray(images).save(f"outputs_{steps}.png")
+            from torchvision.utils import save_image
+            save_image(x_t[:100], 'ddpm_samples.png', nrow=10, normalize=True)
+            print("samples saved to ddpm_samples.png")
             break
 
 
