@@ -37,6 +37,12 @@ def main():
         images = visualize_mnist_data(decoded_data.detach().cpu())
         Image.fromarray(images).save(f"noisy_decoder_data.png")
 
+        # remove last 10 dimensions of the emb
+        emb[:, -3:] = 0
+        decoded_data = model.decode(emb)
+        images = visualize_mnist_data(decoded_data.detach().cpu())
+        Image.fromarray(images).save(f"removed_last_10_decoder_data.png")
+
 
 if __name__ == "__main__":
     main()
