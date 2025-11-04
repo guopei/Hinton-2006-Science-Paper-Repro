@@ -12,7 +12,6 @@ class TimeEmbedding(nn.Module):
         super().__init__()
         self.dim = dim
 
-
     def forward(self, time):
         device = time.device
         half_dim = self.dim // 2
@@ -22,6 +21,7 @@ class TimeEmbedding(nn.Module):
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
         embeddings = embeddings.squeeze()
         return embeddings
+
 
 class ResidualBlock(nn.Module):
     """Residual block with time embedding"""
@@ -53,6 +53,7 @@ class ResidualBlock(nn.Module):
         x += h
         
         return x
+
 
 class UNet(nn.Module):
     """Simplified U-Net for MNIST autoencoder"""
@@ -106,7 +107,6 @@ class UNet(nn.Module):
         t_start = t_start.view(1, 1).expand(x.shape[0], 1)
         # Use simple Euler method for stability
         return x + (t_end[..., None, None] - t_start[..., None, None]) * self(x, t_start)
-
 
 
 if __name__ == "__main__":
