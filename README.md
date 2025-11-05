@@ -17,4 +17,10 @@ x_{t-1} = (x_t - sqrt(1-a_bar_t)epsilon) / sqrt(a_bar_t) * sqrt(a_bar_{t-1}) + s
 
 参考这个代码：https://github.com/Alokia/diffusion-DDIM-pytorch/blob/master/utils/engine.py#L161
 
-终于成了。
+终于成了。成功的关键是，t_prev这里当t-1<0的时候怎么处理。
+
+当eta=0时是DDIM
+当eta=1时是DDPM
+
+DDIM paper说它比DDPM好。
+
