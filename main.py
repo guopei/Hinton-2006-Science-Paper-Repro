@@ -82,6 +82,13 @@ def main():
 
             images = visualize_mnist_data(current_output[:100])
             Image.fromarray(images).save(f"outputs_{steps}.png")
+
+            current_output = noise
+            for _ in range(steps):
+                current_output = model(current_output)
+
+            images = visualize_mnist_data(current_output[:100])
+            Image.fromarray(images).save(f"outputs_mode_collapsed_{steps}.png")
             break
 
 
