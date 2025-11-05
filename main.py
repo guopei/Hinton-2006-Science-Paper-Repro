@@ -82,33 +82,30 @@ def main():
 
     model.eval()
 
+    eta = 0
+
     with torch.no_grad():
         for _, (data, _) in enumerate(test_loader):
             # Start with pure noise
             x_t = torch.randn_like(data).to(device)
             
             for i in range(steps-1, -1, -1):
-                # print(i)
                 t = torch.full((data.size(0),), i, device=device, dtype=torch.long)
-                betas_t = betas[t][:, None, None, None]
-                sqrt_one_minus_alphas_cumprod_t = sqrt_one_minus_alphas_cumprod[t][:, None, None, None]
-                sqrt_recip_alphas_t = torch.sqrt(1.0 / alphas[t])[:, None, None, None]
+                alpha_t = alphas_cumprod[t][:, None, None, None]
+                t_prev = torch.max(t-1, torch.tensor(0, device=device))
+                alpha_t_prev = alphas_cumprod_prev[t_prev][:, None, None, None]
+                sigma_t = eta * torch.sqrt((1 - alpha_t_prev) / (1 - alpha_t) * (1 - alpha_t / alpha_t_prev)) 
                 
                 # 预测噪声
                 predicted_noise = model(x_t, t)
+                epsilon_t = torch.randn_like(x_t)
 
-                # print(predicted_noise.max(), predicted_noise.min())
-                # 计算均值
-                model_mean = sqrt_recip_alphas_t * (
-                    x_t - betas_t * predicted_noise / sqrt_one_minus_alphas_cumprod_t
-                )
+                x_t_minus_one = torch.sqrt(alpha_t_prev / alpha_t) * x_t + \
+                (torch.sqrt(1 - alpha_t_prev - sigma_t ** 2) - torch.sqrt(
+                    (alpha_t_prev * (1 - alpha_t)) / alpha_t)) * predicted_noise + \
+                sigma_t * epsilon_t
 
-                if i == 0:
-                    x_t = model_mean
-                else:
-                    posterior_variance_t = posterior_variance[t][:, None, None, None]
-                    noise = torch.randn_like(x_t)
-                    x_t = model_mean + torch.sqrt(posterior_variance_t) * noise
+                x_t = x_t_minus_one
 
             from torchvision.utils import save_image
             save_image(x_t[:100], 'ddpm_samples.png', nrow=10, normalize=True)

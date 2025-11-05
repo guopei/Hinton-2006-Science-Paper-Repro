@@ -14,3 +14,7 @@ x_{t-1} = (x_t - sqrt(1-a_bar_t)epsilon) / sqrt(a_bar_t) * sqrt(a_bar_{t-1}) + s
 = sqrt(a_bar_{t-1}) / sqrt(a_bar_t) * x_t + sqrt(1-a_bar_{t-1}) (sqrt(a_bar_{t-1}) / sqrt(a_bar_t) - 1)epsilon)
 
 这个看上去特别像是DDIM，我需要花一些时间把这个搞清楚。
+
+参考这个代码：https://github.com/Alokia/diffusion-DDIM-pytorch/blob/master/utils/engine.py#L161
+
+终于成了。
