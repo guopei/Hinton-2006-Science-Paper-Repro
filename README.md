@@ -1,26 +1,16 @@
-This repo reimplements the MNIST auto encoder experiment in Hinton's 2006 paper: Reducing the Dimensionality of Data with Neural Networks.
+这个branch打算实验一个intuitive的采样方法：
 
-To start, run 
-
-`uv run main.py`
-
-By far, I've establishd a baseline on MNIST with 3.36 average square loss, compared to 3.00 reported in the paper. A visualization of some reconstructed test set data can be found below and they look pretty much the same to the original data.
+因为：
+x_t = sqrt(a_bar_t)x_0 + sqrt(1-a_bar_t)epsilon
 
 
-**Original:**
+x_{t-1} = sqrt(a_bar_{t-1})x_0 + sqrt(1-a_bar_{t-1})epsilon
 
-![](data.png)
+那么
 
-**Reconstructed:**
+x_0 = (x_t - sqrt(1-a_bar_t)epsilon) / sqrt(a_bar_t)
 
-![](outputs.png)
+x_{t-1} = (x_t - sqrt(1-a_bar_t)epsilon) / sqrt(a_bar_t) * sqrt(a_bar_{t-1}) + sqrt(1-a_bar_{t-1})epsilon 
+= sqrt(a_bar_{t-1}) / sqrt(a_bar_t) * x_t + sqrt(1-a_bar_{t-1}) (sqrt(a_bar_{t-1}) / sqrt(a_bar_t) - 1)epsilon)
 
-Almost 20 years have passed and it only takes me collectively an hour or so to implement this experiment. On a RTX 3060, the whole training takes only a little more than one minute. I can avoid worrying about the Boltzman Machine algorithm, and the training succeeds with the help of better initialization, better optimizer, batch norm, gradient clipping, and learning rate scheduler etc.
-
-那么现在有一个小成就，就是训练的时候按照flow的方法，每一个epoch都训练所有step，然后生成的时候，按照step * 2去生成，step=3的时候，效果还不错
-
-see model_3.pth and outputs_3.png
-
-step=5的时候，按照step*3去生成，效果也还不错
-
-see model_5.pth and outputs_5.png
+这个看上去特别像是DDIM，我需要花一些时间把这个搞清楚。
