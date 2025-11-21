@@ -63,7 +63,7 @@ def main():
             scheduler.step()
 
             print(f"Epoch {epoch}/{train_epochs}, Loss: {total_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}")
-        # torch.save(model.state_dict(), f"model_{train_epochs}.pth")
+        torch.save(model.state_dict(), f"model_{train_epochs}.pth")
         time_end = time.time()
         print(f"Training time: {time_end - time_start} seconds")
 
