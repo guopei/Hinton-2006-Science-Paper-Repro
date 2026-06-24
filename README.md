@@ -1,4 +1,7 @@
-This repo reimplements the MNIST auto encoder experiment in Hinton's 2006 paper: Reducing the Dimensionality of Data with Neural Networks.
+This repo contains code for my blogpost [The Autoencoder Perspective: Reinventing VAE, Diffusion, and Flow Matching
+](https://peiguo.me/posts/autoencoder-en/). Click branches to view different models.
+
+This branch reimplements the MNIST auto encoder experiment in Hinton's 2006 paper: Reducing the Dimensionality of Data with Neural Networks.
 
 To start, run 
 
